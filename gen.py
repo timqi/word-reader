@@ -55,12 +55,23 @@ def convert(word_list_file, voice_file):
         audiofile = eyed3.load(voice_file)
         audiofile.initTag()
         audiofile.tag.artist = "Tim"
-        audiofile.tag.album = "Tim Vocabulary"
+        audiofile.tag.album = "Vocabulary"
         audiofile.tag.album_artist = "Tim"
         audiofile.tag.title = os.path.splitext(os.path.basename(word_list_file))[0]
-        audiofile.tag.lyrics.set("\n".join(lyrics))
         audiofile.tag.save()
         print("Assign tag to:{}".format(voice_file))
+
+        with open(os.path.splitext(voice_file)[0]+".lrc", 'w+') as flrc:
+            flrc.write("[ti:{}]\n".format(os.path.splitext(os.path.basename(word_list_file))[0]))
+            flrc.write("[ar:Tim]\n")
+            flrc.write("[au:Tim]\n")
+            flrc.write("[al:Vocabulary]\n")
+            flrc.write("[by:Tim]\n\n")
+            for l in lyrics:
+                flrc.write("[00:01.00]"+l+"\n")
+            flrc.close()
+            print("Write lyrics")
+
 
 
 def main():
