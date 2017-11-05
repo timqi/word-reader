@@ -1,4 +1,5 @@
 import os
+import eyed3
 import argparse
 from gtts import gTTS
 
@@ -37,7 +38,10 @@ def filter_word(line):
 def convert(word_list_file, voice_file):
     with open(os.path.join(word_list_path, word_list_file), 'r') as f:
         words = []
+        lyrics = []
         for line in f:
+            if line.strip():
+                lyrics.append(line.strip())
             word = filter_word(line)
             if word:
                 words.append(word)
@@ -48,6 +52,16 @@ def convert(word_list_file, voice_file):
         tts.save(voice_file)
         print("Saved the words: {}".format(words))
 
+        audiofile = eyed3.load(voice_file)
+        audiofile.initTag()
+        audiofile.tag.artist = "Tim"
+        audiofile.tag.album = "Tim Vocabulary"
+        audiofile.tag.album_artist = "Tim"
+        audiofile.tag.title = os.path.splitext(os.path.basename(word_list_file))[0]
+        audiofile.tag.lyrics.set("\n".join(lyrics))
+        audiofile.tag.save()
+        print("Assign tag to:{}".format(voice_file))
+
 
 def main():
     parser = argparse.ArgumentParser(description="Gen mp3 file from word_list")
@@ -56,12 +70,17 @@ def main():
     args = parser.parse_args()
 
     if args.update:
-        for word_list_file in os.listdir(word_list_path):
-            number = word_list_file.split('-')[0]
-            if number in args.update:
-                voice_file = os.path.join(outputs_path,
-                        os.path.splitext(word_list_file)[0]+'.mp3')
+        if args.update[0] == 'all':
+            for word_list_file in os.listdir(word_list_path):
+                voice_file = os.path.join(outputs_path, os.path.splitext(word_list_file)[0]+'.mp3')
                 convert(word_list_file, voice_file)
+        else:
+            for word_list_file in os.listdir(word_list_path):
+                number = word_list_file.split('-')[0]
+                if number in args.update:
+                    voice_file = os.path.join(outputs_path,
+                            os.path.splitext(word_list_file)[0]+'.mp3')
+                    convert(word_list_file, voice_file)
         return
 
     for word_list_file in os.listdir(word_list_path):
