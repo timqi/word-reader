@@ -1,7 +1,9 @@
 import os
+import math
 import eyed3
 import argparse
 from gtts import gTTS
+from functools import reduce
 
 
 basepath = os.path.abspath(os.path.dirname(__file__))
@@ -24,31 +26,40 @@ def print_info(text):
 def print_warning(text):
     print(bcolors.WARNING + text + bcolors.ENDC)
 
-def filter_word(line):
-    line = line.strip()
-    if not line:
-        return None
-    else:
-        word = line.strip()
-        for i, c in enumerate(word):
+class Entry:
+    def __init__(self, word, lyric):
+        self.word = word
+        self.lyric = lyric
+
+def filter_line(line):
+    word = lyric = None
+    striped_line = line.strip()
+    if striped_line:
+        lyric = striped_line.replace('#', '')
+        for i, c in enumerate(striped_line):
             if c == '#':
-                return word[:i].strip() if i > 0 else None
-        return word
+                word = striped_line[:i].strip() if i > 0 else None
+                break
+        if i == len(striped_line)-1 and not word:
+            word = striped_line
+        return Entry(word, lyric)
+    else:
+        return None
+
 
 def convert(word_list_file, voice_file):
     with open(os.path.join(word_list_path, word_list_file), 'r') as f:
-        words = []
-        lyrics = []
+        entries = []
         for line in f:
-            if line.strip():
-                lyrics.append(line.strip())
-            word = filter_word(line)
-            if word:
-                words.append(word)
+            entry = filter_line(line)
+            if entry:
+                entries.append(entry)
         f.close()
+        words = list(map(lambda entry: entry.word, entries))
+
         print_info("{} -> {}".format(os.path.basename(word_list_file), 
             os.path.basename(voice_file)))
-        tts = gTTS(text='.   .   '.join(words), lang='en')
+        tts = gTTS(text='.   '.join(words), lang='en')
         tts.save(voice_file)
         print("Saved the words: {}".format(words))
 
@@ -61,14 +72,28 @@ def convert(word_list_file, voice_file):
         audiofile.tag.save()
         print("Assign tag to:{}".format(voice_file))
 
+        audio_time_secs = audiofile.info.time_secs
+        char_count = reduce(lambda x,y: x+y, map(lambda word:len(word), filter(lambda w:w, words)))
+        time_secs_per_chat = audio_time_secs / char_count
         with open(os.path.splitext(voice_file)[0]+".lrc", 'w+') as flrc:
             flrc.write("[ti:{}]\n".format(os.path.splitext(os.path.basename(word_list_file))[0]))
             flrc.write("[ar:Tim]\n")
             flrc.write("[au:Tim]\n")
             flrc.write("[al:Vocabulary]\n")
             flrc.write("[by:Tim]\n\n")
-            for l in lyrics:
-                flrc.write("[00:01.00]"+l+"\n")
+
+            char_computed = 0
+            for entry in entries:
+                time = char_computed * time_secs_per_chat
+                minute = sec = persec = 0
+                if time > 60:
+                    minute = time // 60
+                sec = int(time % 60)
+                persec = int(math.modf(time)[0] * 100)
+                flrc.write("[{:02d}:{:02d}.{:02d}]{}\n"
+                        .format(minute, sec, persec, entry.lyric))
+                if entry.word:
+                    char_computed = char_computed + len(entry.word)
             flrc.close()
             print("Write lyrics")
 
