@@ -55,7 +55,7 @@ def convert(word_list_file, voice_file):
             if entry:
                 entries.append(entry)
         f.close()
-        words = list(map(lambda entry: entry.word, entries))
+        words = list(map(lambda e:e.word, filter(lambda e:e.word, entries)))
 
         print_info("{} -> {}".format(os.path.basename(word_list_file), 
             os.path.basename(voice_file)))
