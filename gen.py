@@ -87,7 +87,7 @@ def convert(word_list_file, voice_file):
                 time = char_computed * time_secs_per_chat
                 minute = sec = persec = 0
                 if time > 60:
-                    minute = time // 60
+                    minute = int(time // 60)
                 sec = int(time % 60)
                 persec = int(math.modf(time)[0] * 100)
                 flrc.write("[{:02d}:{:02d}.{:02d}]{}\n"
